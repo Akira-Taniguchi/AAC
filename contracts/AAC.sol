@@ -6,13 +6,14 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {IERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import {IAAC} from "./IAAC.sol";
 
-contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
-	struct MetaData {
-		string creatorName;
-		string free;
-		string problemUrl;
-	}
+contract AAC is
+	AccessControlUpgradeable,
+	UUPSUpgradeable,
+	ERC721Upgradeable,
+	IAAC
+{
 	bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 	using CountersUpgradeable for CountersUpgradeable.Counter;
 	CountersUpgradeable.Counter private _tokenIds;
@@ -38,7 +39,8 @@ contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
 		returns (bool)
 	{
 		return
-			_interfaceId == type(IERC721Upgradeable).interfaceId ||
+			_interfaceId == type(IAAC).interfaceId ||
+			ERC721Upgradeable.supportsInterface(_interfaceId) ||
 			AccessControlUpgradeable.supportsInterface(_interfaceId);
 	}
 
@@ -46,7 +48,7 @@ contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
 		address _to,
 		string memory _creatorName,
 		string memory _problemUrl
-	) public onlyRole(MINTER_ROLE) {
+	) external onlyRole(MINTER_ROLE) {
 		uint256 tokenId = _tokenIds.current();
 		_tokenIds.increment();
 		_mint(_to, tokenId);
@@ -57,7 +59,7 @@ contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
 		address _to,
 		string memory _creatorName,
 		string memory _problemUrl
-	) public onlyRole(MINTER_ROLE) {
+	) external onlyRole(MINTER_ROLE) {
 		uint256 tokenId = _tokenIdsReverse;
 		_tokenIdsReverse--;
 		_mint(_to, tokenId);
@@ -66,17 +68,17 @@ contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
 
 	function grantMinterRole(
 		address _minter
-	) public onlyRole(DEFAULT_ADMIN_ROLE) {
+	) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		_grantRole(MINTER_ROLE, _minter);
 	}
 
 	function revokeMinterRole(
 		address _minter
-	) public onlyRole(DEFAULT_ADMIN_ROLE) {
+	) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		_revokeRole(MINTER_ROLE, _minter);
 	}
 
-	function updateFree(uint256 _tokenId, string memory _free) public {
+	function updateFree(uint256 _tokenId, string memory _free) external {
 		require(bytes(_free).length > 0, "free must not be empty");
 		address owner = ownerOf(_tokenId);
 		require(owner == _msgSender(), "caller is not owner");
@@ -87,7 +89,9 @@ contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
 		uint256 _tokenId,
 		string memory _creatorName,
 		string memory _problemUrl
-	) public onlyRole(MINTER_ROLE) {
+	) external onlyRole(MINTER_ROLE) {
+		_requireMinted(_tokenId);
+		// TODO token idのチェック
 		require(
 			bytes(_creatorName).length > 0,
 			"creatorName must not be empty"
@@ -99,7 +103,7 @@ contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
 
 	function getMetaData(
 		uint256 _tokenId
-	) public view returns (MetaData memory) {
+	) external view returns (MetaData memory) {
 		MetaData memory metaData = _tokenMetadata[_tokenId];
 		return metaData;
 	}
@@ -108,7 +112,3 @@ contract AAC is AccessControlUpgradeable, UUPSUpgradeable, ERC721Upgradeable {
 		address
 	) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }
-
-//確認事項
-// 最初のtoken idは0始まりです
-// baseのURLとかがおそらく決まっていないので、tokenURIは何も返さないことにしました

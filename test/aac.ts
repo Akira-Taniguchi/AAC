@@ -29,6 +29,11 @@ describe('AAC test', () => {
 		minterRole = await token.MINTER_ROLE()
 	})
 
+	const getAccessControlErrorString = function (address: string): string {
+		const lowerAddress = address.toLowerCase()
+		return `AccessControl: account ${lowerAddress} is missing role ${minterRole}`
+	}
+
 	beforeEach(async () => {
 		snapshot = await takeSnapshot()
 	})
@@ -60,7 +65,7 @@ describe('AAC test', () => {
 			expect(metadata.free).to.equal('')
 			expect(metadata.problemUrl).to.equal(problemUrl)
 			const tmp = await token.ownerOf(tokenId)
-			expect(tmp).to.equal(owner.address)
+			expect(tmp).to.equal(addr1.address)
 		})
 
 		it('mints token and verifies metadata', async () => {
@@ -72,7 +77,7 @@ describe('AAC test', () => {
 			expect(metadata.free).to.equal('')
 			expect(metadata.problemUrl).to.equal(problemUrl)
 			const tmp = await token.ownerOf(tokenId)
-			expect(tmp).to.equal(owner.address)
+			expect(tmp).to.equal(addr1.address)
 		})
 
 		it('mint reverse token and verifies metadata', async () => {
@@ -86,7 +91,7 @@ describe('AAC test', () => {
 			expect(metadata.free).to.equal('')
 			expect(metadata.problemUrl).to.equal(problemUrl)
 			const tmp = await token.ownerOf(tokenId)
-			expect(tmp).to.equal(owner.address)
+			expect(tmp).to.equal(addr1.address)
 		})
 
 		it('mint reverse token and verifies metadata', async () => {
@@ -103,33 +108,30 @@ describe('AAC test', () => {
 			expect(metadata.free).to.equal('')
 			expect(metadata.problemUrl).to.equal(problemUrl)
 			const tmp = await token.ownerOf(tokenId)
-			expect(tmp).to.equal(owner.address)
+			expect(tmp).to.equal(addr1.address)
 		})
 
 		it('non-minter cannot mint token', async () => {
 			await expect(
 				token.connect(addr1).mint(addr1.address, creatorName, problemUrl)
-			).to.be.revertedWith(
-				'AccessControl: account 0x84d59f6e878ca36a1d6e38a6a58a6a553c46e1b8 is missing role 0x859339de7a6a3d2b7c9e49eeedf7bce1b4f4e4d4e0652a7c4ad036f25a9b9bf1'
-			)
+			).to.be.revertedWith(getAccessControlErrorString(addr1.address))
 		})
 		it('non-minter cannot mint token', async () => {
 			await expect(
 				token.connect(addr1).mintReverse(addr1.address, creatorName, problemUrl)
-			).to.be.revertedWith(
-				'AccessControl: account 0x84d59f6e878ca36a1d6e38a6a58a6a553c46e1b8 is missing role 0x859339de7a6a3d2b7c9e49eeedf7bce1b4f4e4d4e0652a7c4ad036f25a9b9bf1'
-			)
+			).to.be.revertedWith(getAccessControlErrorString(addr1.address))
 		})
 	})
 	describe('supportsInterface', () => {
 		it('checks supported interfaces', async () => {
-			const accessControlInterfaceId = '0x7962d6e0'
+			const accessControlInterfaceId = '0x7965db0b'
 			const erc721InterfaceId = '0x80ac58cd'
 			const erc165InterfaceId = '0x01ffc9a7'
-
+			const aacInterfaceId = '0x42712c65'
 			expect(await token.supportsInterface(accessControlInterfaceId)).to.be.true
 			expect(await token.supportsInterface(erc721InterfaceId)).to.be.true
 			expect(await token.supportsInterface(erc165InterfaceId)).to.be.true
+			expect(await token.supportsInterface(aacInterfaceId)).to.be.true
 
 			const unsupportedInterfaceId = '0xffffffff'
 			expect(await token.supportsInterface(unsupportedInterfaceId)).to.be.false
@@ -143,15 +145,15 @@ describe('AAC test', () => {
 
 		it('updates free', async () => {
 			const newFree = 'New free content'
-			await token.connect(addr1).updateFree(1, newFree)
-			const metadata = await token.getMetaData(1)
+			await token.connect(addr1).updateFree(0, newFree)
+			const metadata = await token.getMetaData(0)
 			expect(metadata.free).to.equal(newFree)
 		})
 
 		it('non-owner cannot update free', async () => {
 			const newFree = 'New free content'
 			await expect(
-				token.connect(addr2).updateFree(1, newFree)
+				token.connect(addr2).updateFree(0, newFree)
 			).to.be.revertedWith('caller is not owner')
 		})
 
@@ -160,20 +162,26 @@ describe('AAC test', () => {
 			const newProblemUrl = 'https://example.com/new_problem'
 			await token
 				.connect(owner)
-				.updateMetaData(1, newCreatorName, newProblemUrl)
-			const metadata = await token.getMetaData(1)
+				.updateMetaData(0, newCreatorName, newProblemUrl)
+			const metadata = await token.getMetaData(0)
 			expect(metadata.creatorName).to.equal(newCreatorName)
 			expect(metadata.problemUrl).to.equal(newProblemUrl)
+		})
+
+		it('non-existent token cannot be updated', async () => {
+			const newCreatorName = 'Jane Smith'
+			const newProblemUrl = 'https://example.com/new_problem'
+			await expect(
+				token.connect(owner).updateMetaData(6, newCreatorName, newProblemUrl)
+			).to.be.revertedWith('ERC721: invalid token ID')
 		})
 
 		it('non-minter cannot update creatorName and problemUrl', async () => {
 			const newCreatorName = 'Jane Smith'
 			const newProblemUrl = 'https://example.com/new_problem'
 			await expect(
-				token.connect(addr1).updateMetaData(1, newCreatorName, newProblemUrl)
-			).to.be.revertedWith(
-				'AccessControl: account 0x84d59f6e878ca36a1d6e38a6a58a6a553c46e1b8 is missing role 0x859339de7a6a3d2b7c9e49eeedf7bce1b4f4e4d4e0652a7c4ad036f25a9b9bf1'
-			)
+				token.connect(addr1).updateMetaData(0, newCreatorName, newProblemUrl)
+			).to.be.revertedWith(getAccessControlErrorString(addr1.address))
 		})
 	})
 
@@ -187,16 +195,18 @@ describe('AAC test', () => {
 		})
 
 		it('non-admin cannot grant or revoke minter role', async () => {
+			const adminRole = await token.DEFAULT_ADMIN_ROLE()
+			const getAccessControlErrorString = function (address: string): string {
+				const lowerAddress = address.toLowerCase()
+				return `AccessControl: account ${lowerAddress} is missing role ${adminRole}`
+			}
+
 			await expect(
 				token.connect(addr1).grantMinterRole(addr2.address)
-			).to.be.revertedWith(
-				'AccessControl: account 0x84d59f6e878ca36a1d6e38a6a58a6a553c46e1b8 is missing role 0x0000000000000000000000000000000000000000000000000000000000000000'
-			)
+			).to.be.revertedWith(getAccessControlErrorString(addr1.address))
 			await expect(
 				token.connect(addr1).revokeMinterRole(addr2.address)
-			).to.be.revertedWith(
-				'AccessControl: account 0x84d59f6e878ca36a1d6e38a6a58a6a553c46e1b8 is missing role 0x0000000000000000000000000000000000000000000000000000000000000000'
-			)
+			).to.be.revertedWith(getAccessControlErrorString(addr1.address))
 		})
 	})
 })
