@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-pragma solidity =0.8.19;
+pragma solidity =0.8.18;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -79,7 +79,6 @@ contract AAC is
 	}
 
 	function updateFree(uint256 _tokenId, string memory _free) external {
-		require(bytes(_free).length > 0, "free must not be empty");
 		address owner = ownerOf(_tokenId);
 		require(owner == _msgSender(), "caller is not owner");
 		_tokenMetadata[_tokenId].free = _free;
@@ -91,12 +90,6 @@ contract AAC is
 		string memory _problemUrl
 	) external onlyRole(MINTER_ROLE) {
 		_requireMinted(_tokenId);
-		// TODO token idのチェック
-		require(
-			bytes(_creatorName).length > 0,
-			"creatorName must not be empty"
-		);
-		require(bytes(_problemUrl).length > 0, "_problemUrl must not be empty");
 		_tokenMetadata[_tokenId].creatorName = _creatorName;
 		_tokenMetadata[_tokenId].problemUrl = _problemUrl;
 	}

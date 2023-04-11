@@ -14,7 +14,7 @@ const privateKey =
 
 const config = {
 	solidity: {
-		version: '0.8.19',
+		version: '0.8.18',
 		settings: {
 			optimizer: {
 				enabled: true,
@@ -23,20 +23,14 @@ const config = {
 		},
 	},
 	networks: {
-		rinkeby: {
-			url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ARCHEMY_KEY!}`,
-			accounts: [privateKey],
-		},
-		polygonMumbai: {
-			url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env
-				.ARCHEMY_KEY!}`,
+		mainnet: {
+			url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ARCHEMY_KEY!}`,
 			accounts: [privateKey],
 		},
 	},
 	etherscan: {
 		apiKey: {
-			rinkeby: process.env.ETHERSCAN_API_KEY!,
-			polygonMumbai: process.env.POLYGONSCAN_API_KEY!,
+			mainnet: process.env.ETHERSCAN_API_KEY!,
 		},
 	},
 }
